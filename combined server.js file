@@ -1,0 +1,230 @@
+// server.js
+const express = require("express");
+const bodyParser = require("body-parser");
+const { v4: uuidv4 } = require("uuid");
+
+const app = express();
+const PORT = 3000;
+
+// ==================== Middleware ==================== //
+
+// Parse JSON request bodies
+app.use(bodyParser.json());
+
+// Custom Logger Middleware
+const logger = (req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+};
+app.use(logger);
+
+// Authentication Middleware
+const authenticate = (req, res, next) => {
+  const apiKey = req.headers["x-api-key"];
+  if (apiKey !== "my-secret-key") {
+    return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
+  }
+  next();
+};
+
+// Validation Middleware for Product Data
+const validateProduct = (req, res, next) => {
+  const { name, description, price, category, inStock } = req.body;
+  if (
+    !name ||
+    typeof name !== "string" ||
+    typeof description !== "string" ||
+    typeof category !== "string" ||
+    typeof price !== "number" ||
+    typeof inStock !== "boolean"
+  ) {
+    return res.status(400).json({ error: "Invalid product data format" });
+  }
+  next();
+};
+
+// ==================== Error Classes ==================== //
+
+class NotFoundError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "NotFoundError";
+    this.statusCode = 404;
+  }
+}
+
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+    this.statusCode = 400;
+  }
+}
+
+// Async Handler Wrapper
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
+// ==================== Data Store ==================== //
+let products = [];
+
+// ==================== Routes ==================== //
+
+// Root Route
+app.get("/", (req, res) => {
+  res.send("Hello World");
+});
+
+// Use authentication for all /api routes
+app.use("/api", authenticate);
+
+// GET /api/products - List all products (with filtering + pagination)
+app.get(
+  "/api/products",
+  asyncHandler((req, res) => {
+    const { category, page = 1, limit = 5 } = req.query;
+
+    let filtered = products;
+    if (category) filtered = filtered.filter((p) => p.category === category);
+
+    const start = (page - 1) * limit;
+    const paginated = filtered.slice(start, start + Number(limit));
+
+    res.json({
+      total: filtered.length,
+      page: Number(page),
+      limit: Number(limit),
+      products: paginated,
+    });
+  })
+);
+
+// GET /api/products/:id - Get a product by ID
+app.get(
+  "/api/products/:id",
+  asyncHandler((req, res, next) => {
+    const product = products.find((p) => p.id === req.params.id);
+    if (!product) throw new NotFoundError("Product not found");
+    res.json(product);
+  })
+);
+
+// POST /api/products - Create new product
+app.post(
+  "/api/products",
+  validateProduct,
+  asyncHandler((req, res) => {
+    const { name, description, price, category, inStock } = req.body;
+    const newProduct = {
+      id: uuidv4(),
+      name,
+      description,
+      price,
+      category,
+      inStock,
+    };
+    products.push(newProduct);
+    res.status(201).json(newProduct);
+  })
+);
+
+// PUT /api/products/:id - Update product
+app.put(
+  "/api/products/:id",
+  validateProduct,
+  asyncHandler((req, res, next) => {
+    const product = products.find((p) => p.id === req.params.id);
+    if (!product) throw new NotFoundError("Product not found");
+    Object.assign(product, req.body);
+    res.json(product);
+  })
+);
+
+// DELETE /api/products/:id - Delete product
+app.delete(
+  "/api/products/:id",
+  asyncHandler((req, res, next) => {
+    const exists = products.some((p) => p.id === req.params.id);
+    if (!exists) throw new NotFoundError("Product not found");
+    products = products.filter((p) => p.id !== req.params.id);
+    res.json({ message: "Product deleted successfully" });
+  })
+);
+
+// GET /api/search?name=term - Search products by name
+app.get(
+  "/api/search",
+  asyncHandler((req, res) => {
+    const { name } = req.query;
+    if (!name) throw new ValidationError("Missing search term");
+    const results = products.filter((p) =>
+      p.name.toLowerCase().includes(name.toLowerCase())
+    );
+    res.json(results);
+  })
+);
+
+// GET /api/products/stats - Get product statistics (count by category)
+app.get(
+  "/api/products/stats",
+  asyncHandler((req, res) => {
+    const stats = products.reduce((acc, p) => {
+      acc[p.category] = (acc[p.category] || 0) + 1;
+      return acc;
+    }, {});
+    res.json(stats);
+  })
+);
+
+// ==================== Global Error Handler ==================== //
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.statusCode || 500).json({
+    error: err.name,
+    message: err.message || "Internal Server Error",
+  });
+});
+
+// ==================== Start Server ==================== //
+app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           
