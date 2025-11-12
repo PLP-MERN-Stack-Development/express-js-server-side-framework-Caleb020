@@ -1,0 +1,42 @@
+// initializing project
+mkdir express-api
+cd express-api
+npm init -y
+
+//installing dependancies
+npm install express body-parser uuid
+
+//creating sever.js
+const express = require("express");
+const bodyParser = require("body-parser");
+const { v4: uuidv4 } = require("uuid");
+
+const app = express();
+const PORT = 3000;
+
+// Middleware to parse JSON
+app.use(bodyParser.json());
+
+// Simple Hello World route
+app.get("/", (req, res) => {
+  res.send("Hello World");
+});
+
+// Start server
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+// runing with:
+node server.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
